@@ -10,7 +10,6 @@ Created on Sat Oct 28 17:07:29 2023
 This module is a box-constrained Levenberg-Marquardt Algorithm for the Heston Model. 
 
 """
-
 import warnings
 warnings.filterwarnings('ignore')
 import numpy as np
@@ -19,7 +18,7 @@ from py_vollib_vectorized import vectorized_implied_volatility as calculate_iv
 from scipy import linalg
 from heston_derivative_constraints import heston_constraints,heston_implied_vol_derivative
 
-def levenberg_Marquardt(Data,old_params,I,w,N,L,precision,params_2b_calibrated,accel_mag,min_acc):
+def levenberg_Marquardt(Data,old_params,I,w,N,L,precision,params_2b_calibrated,accel_mag,min_acc, return_logs=False):
     """
   
 
@@ -68,6 +67,11 @@ def levenberg_Marquardt(Data,old_params,I,w,N,L,precision,params_2b_calibrated,a
 
     """
     
+    # Foolproof check: skip if market_vol is all NaN or empty
+    if (Data.market_vol is None or np.size(Data.market_vol) == 0 or np.all(np.isnan(Data.market_vol))):
+        print("[LM] Skipping calibration: market_vol is all NaN or empty.")
+        return old_params, 0, 0, [], []
+    
     skip=1
     
     nu = 2
@@ -108,6 +112,7 @@ def levenberg_Marquardt(Data,old_params,I,w,N,L,precision,params_2b_calibrated,a
     accelerator=1
     RMSE = []
     identity_matrix = np.eye(5)
+    logs = []
     while k < I:
         
         # Calculating step of the parameters. inv is linalg.inv
@@ -154,6 +159,13 @@ def levenberg_Marquardt(Data,old_params,I,w,N,L,precision,params_2b_calibrated,a
                 accelerator = accel_mag*accelerator
             
             if k % 10 == 0:
+                # Compose a log message for progress
+                rmse_val = RMSE[-1] if RMSE else float('nan')
+                msg = f"Iteration {k}: RMSE={rmse_val:.4f}, params={[float(x) for x in old_params.ravel()]}"
+
+                logs.append(msg)
+                if not return_logs:
+                    print(msg)
                 print(f"Iteration: {k}")
                 print("Current params: vbar={:.6f}, sigma={:.6f}, rho={:.6f}, kappa={:.6f}, v0={:.6f}".format(
                     float(old_params[0,0]), float(old_params[1,0]), float(old_params[2,0]),
@@ -212,5 +224,5 @@ def levenberg_Marquardt(Data,old_params,I,w,N,L,precision,params_2b_calibrated,a
         
     if skip==1:
         print('Exceeded maximum iterations')
-
-    return old_params, counts_accepted, counts_rejected, RMSE
+    # Always return 5 outputs for compatibility
+    return old_params, counts_accepted, counts_rejected, RMSE, logs
