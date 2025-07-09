@@ -361,12 +361,11 @@ class Data_Class:
         fig.tight_layout()
         plt.show()
 
-        try:
-            os.mkdir(f'Results_SPX_{date_today}')
-        except:
-            pass
+        # choose whatever resolution you like (e.g. 200 dpi)
+        fig.set_size_inches(13, 5)
+        fig.savefig(f'{date_today}.png', dpi=600, bbox_inches='tight')
 
-        fig.savefig(f'Results_SPX_{date_today}/surface.png', dpi=300)
+
             
 
 
